@@ -65,3 +65,11 @@ WHERE score = (SELECT max(score)
 FROM student) 
 GROUP BY n_group, name
 --________________________________10_______________________________
+SELECT s.n_group, s.name, s.score
+FROM student s
+JOIN (
+SELECT n_group, MAX(score) AS max_score
+FROM student
+GROUP BY n_group
+) s_max ON s.n_group = s_max.n_group AND s.score = s_max.max_score
+ORDER BY s.n_group;

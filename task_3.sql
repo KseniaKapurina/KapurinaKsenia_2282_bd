@@ -97,3 +97,72 @@ INNER JOIN hobby h
 ON sh.hobby_id = h.id
 WHERE (sh.date_finish IS Null)
 GROUP BY st.surname, st.name, st.n_group
+
+--________________________________15___________________________________
+--Для каждого хобби вывести количество людей, которые им занимаются.
+SELECT h.name, COUNT(sh.student_id) AS stud_on_hobby
+FROM student_hobby sh inner join hobby h
+ON sh.hobby_id = h.id
+GROUP BY hobby_id, h.name
+ORDER BY stud_on_hobby DESC
+
+--________________________________16___________________________________
+--Вывести ИД самого популярного хобби.
+SELECT h.id as most_popular_hobby_id 
+FROM student_hobby sh INNER JOIN hobby h
+ON sh.hobby_id = h.id
+GROUP BY h.id
+ORDER BY COUNT(sh.student_id)  desc
+limit 1
+
+--________________________________17___________________________________
+--Вывести всю информацию о студентах, занимающихся самым популярным хобби.
+SELECT h.name, h.risk,st.name,st.n_group,
+extract (year from age(now()::date, sh.date_start)) * 12 + extract(month from age(now()::date, sh.date_start)) as da
+FROM student st inner join student_hobby sh
+ON st.id = sh.student_id
+INNER JOIN hobby h
+ON sh.hobby_id = h.id
+ORDER BY da DESC limit 10
+
+--________________________________18___________________________________
+--Вывести ИД 3х хобби с максимальным риском.
+SELECT h.risk AS most_risk_hobby_id 
+FROM hobby h
+ORDER BY risk DESC
+limit 3
+
+
+--________________________________19___________________________________
+--Вывести 10 студентов, которые занимаются одним (или несколькими) хобби самое продолжительно время.
+SELECT h.name as hobby_name, h.risk,st.name AS student_name,st.n_group,
+extract (year from age(now()::date, sh.date_start)) * 12 + extract(month from age(now()::date, sh.date_start)) as month_length
+FROM student st INNER JOIN student_hobby sh
+ON st.id = sh.student_id
+INNER JOIN hobby h
+ON sh.hobby_id = h.id
+ORDER BY month_length DESC
+limit 10
+
+--________________________________20___________________________________
+--Вывести номера групп (без повторений), в которых учатся студенты из предыдущего запроса.
+
+--________________________________21___________________________________
+--Создать представление, которое выводит номер зачетки, имя и фамилию студентов, отсортированных по убыванию среднего балла.
+CREATE OR replace view fio_student AS 
+SELECT name, surname
+FROM student
+ORDER BY score DESC
+--Команда CREATE OR REPLACE VIEW обновляет представление.
+
+
+--________________________________23___________________________________
+--Представление: найти хобби с максимальным риском среди самых популярных хобби на 2 курсе.
+SELECT h.risk as most_popular_risk_hobby_id, h.name
+FROM student st INNER JOIN student_hobby sh
+ON st.id = sh.student_id
+INNER JOIN hobby h
+ON sh.hobby_id = h.id
+WHERE st.n_group::varchar LIKE '2%'
+ORDER BY risk DESC
+limit 1

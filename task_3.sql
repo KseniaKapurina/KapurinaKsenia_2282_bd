@@ -324,3 +324,159 @@ HAVING COUNT(DISTINCT student_hobby.hobby_id) = (
             ) AS counts
     )
 LIMIT 1;
+--________________________________26__________________________________
+--Создать обновляемое представление.
+CREATE OR REPLACE VIEW ST2 AS
+SELECT id,
+    surname,
+    name,
+    N_group
+FROM Students WITH CHECK OPTION;
+--________________________________27__________________________________
+--Для каждой буквы алфавита из имени найти максимальный, средний и минимальный балл. (Т.е. среди всех студентов, чьё имя начинается на А (Алексей, Алина, Артур, Анджела) найти то, что указано в задании. Вывести на экран тех, максимальный балл которых больше 3.6
+SELECT SUBSTR(name, 1, 1) AS first_letter,
+    MAX(score) AS max_score,
+    AVG(score) AS avg_score,
+    MIN(score) AS min_score
+FROM student
+GROUP BY SUBSTR(name, 1, 1)
+HAVING MAX(score) > 3.6
+ORDER BY first_letter;
+--________________________________28__________________________________
+--Для каждой фамилии на курсе вывести максимальный и минимальный средний балл. (Например, в университете учатся 4 Иванова (1-2-3-4). 1-2-3 учатся на 2 курсе и имеют средний балл 4.1, 4, 3.8 соответственно, а 4 Иванов учится на 3 курсе и имеет балл 4.5. На экране должно быть следующее: 2 Иванов 4.1 3.8 3 Иванов 4.5 4.5
+SELECT surname,
+    LEFT(CAST(student.n_group AS varchar), 1) AS course_number,
+    MAX(score) AS max_score,
+    MIN(score) AS min_score
+FROM student
+GROUP BY surname,
+    LEFT(CAST(student.n_group AS varchar), 1)
+ORDER BY surname;
+--________________________________29__________________________________
+--Для каждого года рождения подсчитать количество хобби, которыми занимаются или занимались студенты.
+SELECT EXTRACT(
+        year
+        FROM student.date_birth
+    ) AS year_of_birth,
+    COUNT(DISTINCT student_hobby.hobby_id) AS hobbies
+FROM student
+    JOIN student_hobby ON student.id = student_hobby.student_id
+GROUP BY year_of_birth;
+--________________________________30__________________________________
+--Для каждой буквы алфавита в имени найти максимальный и минимальный риск хобби.
+SELECT LEFT(student.name, 1) AS first_letter,
+    MAX(hobby.risk) AS max_risk,
+    MIN(hobby.risk) AS min_risk
+FROM student
+    JOIN student_hobby ON student.id = student_hobby.student_id
+    JOIN hobby ON student_hobby.hobby_id = hobby.id
+GROUP BY first_letter;
+--________________________________31__________________________________
+--Для каждого месяца из даты рождения вывести средний балл студентов, которые занимаются хобби с названием «Футбол»
+SELECT EXTRACT(
+        month
+        FROM student.date_birth
+    ) AS month_of_birth,
+    AVG(student.score) AS average_score
+FROM student
+    JOIN student_hobby ON student.id = student_hobby.student_id
+    JOIN hobby ON student_hobby.hobby_id = hobby.id
+WHERE hobby.name = 'Футбол'
+GROUP BY month_of_birth;
+--________________________________32__________________________________
+--Вывести информацию о студентах, которые занимались или занимаются хотя бы 1 хобби в следующем формате: Имя: Иван, фамилия: Иванов, группа: 1234
+SELECT concat(
+        'Имя: ',
+        student.name,
+        ', фамилия: ',
+        student.surname,
+        ', группа: ',
+        student.n_group
+    ) AS output
+FROM student
+WHERE EXISTS (
+        SELECT 1
+        FROM student_hobby
+        WHERE student.id = student_hobby.student_id
+    );
+--________________________________33__________________________________
+--Найдите в фамилии в каком по счёту символа встречается «ов». Если 0 (т.е. не встречается, то выведите на экран «не найдено».
+SELECT surname,
+    CASE
+        WHEN position('ов' in surname) > 0 THEN cast(position('ов' in surname) as varchar)
+        ELSE 'не найдено'
+    END AS result
+FROM student;
+--________________________________34__________________________________
+--Дополните фамилию справа символом # до 10 символов.
+SELECT rpad(surname, 10, '#') AS padded_surname
+FROM student;
+--________________________________35__________________________________
+--При помощи функции удалите все символы # из предыдущего запроса.
+SELECT replace(rpad(surname, 10, '#'), '#', '') AS unpadded_surname
+FROM student;
+--________________________________36__________________________________
+--Выведите на экран сколько дней в апреле 2018 года.
+SELECT DATEDIFF('2018-05-01', '2018-03-31') AS days_in_april;
+--________________________________37__________________________________
+--Выведите на экран какого числа будет ближайшая суббота.
+SELECT DATE_ADD(
+        CURRENT_DATE(),
+        INTERVAL (7 - DAYOFWEEK(CURRENT_DATE())) DAY
+    ) AS next_saturday;
+--________________________________38__________________________________
+--Выведите на экран век, а также какая сейчас неделя года и день года.
+SELECT CEIL(YEAR(CURRENT_DATE()) / 100) AS century,
+    WEEK(CURRENT_DATE()) AS week_number,
+    DAYOFYEAR(CURRENT_DATE()) AS day_number;
+--________________________________39__________________________________
+--Выведите всех студентов, которые занимались или занимаются хотя бы 1 хобби. Выведите на экран Имя, Фамилию, Названию хобби, а также надпись «занимается», если студент продолжает заниматься хобби в данный момент или «закончил», если уже не занимает.
+SELECT students.first_name,
+    students.last_name,
+    hobbies.name,
+    CASE
+        WHEN hobbies.end_date IS NULL THEN 'занимается'
+        ELSE 'закончил'
+    END AS status
+FROM students
+    LEFT JOIN hobbies ON students.id = hobbies.student_id
+WHERE hobbies.id IS NOT NULL;
+--________________________________40__________________________________
+--Для каждой группы вывести сколько студентов учится на 5,4,3,2. Использовать обычное математическое округление. Итоговый результат должен выглядеть примерно в таком виде:
+SELECT groups.name,
+    ROUND(
+        SUM(
+            CASE
+                WHEN students.grade = 5 THEN 1
+                ELSE 0
+            END
+        )
+    ) AS grade_5,
+    ROUND(
+        SUM(
+            CASE
+                WHEN students.grade = 4 THEN 1
+                ELSE 0
+            END
+        )
+    ) AS grade_4,
+    ROUND(
+        SUM(
+            CASE
+                WHEN students.grade = 3 THEN 1
+                ELSE 0
+            END
+        )
+    ) AS grade_3,
+    ROUND(
+        SUM(
+            CASE
+                WHEN students.grade = 2 THEN 1
+                ELSE 0
+            END
+        )
+    ) AS grade_2
+FROM students
+    INNER JOIN groups ON students.group_id = groups.id
+GROUP BY groups.name;
+--____________________________________________________________________
